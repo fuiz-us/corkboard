@@ -1,4 +1,3 @@
-use actix_cors::Cors;
 use actix_multipart::form::{MultipartForm, MultipartFormConfig};
 use actix_web::{
     error::ErrorNotFound, get, http::StatusCode, post, web, App, HttpResponse, HttpServer,
@@ -82,16 +81,23 @@ async fn main() -> std::io::Result<()> {
     let app_data = web::Data::new(AppState::default());
 
     HttpServer::new(move || {
-        let cors = Cors::permissive();
-
-        App::new()
-            .wrap(cors)
+        let app = App::new()
             .app_data(web::PayloadConfig::new(250_000_000))
             .app_data(MultipartFormConfig::default().memory_limit(16_000_000))
             .app_data(app_data.clone())
             .service(get)
             .service(exists)
-            .service(upload)
+            .service(upload);
+
+        #[cfg(debug_assertions)]
+        {
+            let cors = actix_cors::Cors::permissive();
+            app.wrap(cors)
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            app
+        }
     })
     .bind((
         if cfg!(debug_assertions) {
