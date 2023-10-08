@@ -93,7 +93,14 @@ async fn main() -> std::io::Result<()> {
             .service(exists)
             .service(upload)
     })
-    .bind(("0.0.0.0", 5040))?
+    .bind((
+        if cfg!(debug_assertions) {
+            "0.0.0.0"
+        } else {
+            "127.0.0.1"
+        },
+        5040,
+    ))?
     .run()
     .await
 }
