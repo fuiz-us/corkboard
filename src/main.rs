@@ -85,10 +85,17 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::PayloadConfig::new(250_000_000))
             .app_data(MultipartFormConfig::default().memory_limit(16_000_000))
             .app_data(app_data.clone())
-            .route("/hello", web::get().to(|| async { "Hello World!" }))
-            .service(get)
-            .service(exists)
-            .service(upload);
+            .service(
+                web::scope(if cfg!(feature = "https") {
+                    "/corkboard"
+                } else {
+                    "/"
+                })
+                .route("/hello", web::get().to(|| async { "Hello World!" }))
+                .service(get)
+                .service(exists)
+                .service(upload),
+            );
 
         #[cfg(feature = "https")]
         {
