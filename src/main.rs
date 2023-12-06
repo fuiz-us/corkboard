@@ -97,7 +97,7 @@ async fn main() -> std::io::Result<()> {
                 .allowed_headers(vec![actix_web::http::header::AUTHORIZATION, actix_web::http::header::ACCEPT])
                 .supports_credentials()
                 .allowed_header(actix_web::http::header::CONTENT_TYPE);
-            app
+            app.wrap(cors)
         }
         #[cfg(not(feature = "https"))]
         {
