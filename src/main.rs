@@ -89,14 +89,20 @@ async fn main() -> std::io::Result<()> {
             .service(exists)
             .service(upload);
 
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "https")]
+        {
+            let cors = actix_cors::Cors::default()
+                .allowed_origin("https://fuiz.us")
+                .allowed_methods(vec!["GET", "POST"])
+                .allowed_headers(vec![actix_web::http::header::AUTHORIZATION, actix_web::http::header::ACCEPT])
+                .supports_credentials()
+                .allowed_header(actix_web::http::header::CONTENT_TYPE);
+            app
+        }
+        #[cfg(not(feature = "https"))]
         {
             let cors = actix_cors::Cors::permissive();
             app.wrap(cors)
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            app
         }
     })
     .bind((
