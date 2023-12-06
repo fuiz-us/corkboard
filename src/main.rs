@@ -106,10 +106,10 @@ async fn main() -> std::io::Result<()> {
         }
     })
     .bind((
-        if cfg!(debug_assertions) {
-            "0.0.0.0"
-        } else {
+        if cfg!(feature = "https") {
             "127.0.0.1"
+        } else {
+            "0.0.0.0"
         },
         5040,
     ))?
