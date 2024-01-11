@@ -8,9 +8,11 @@ use actix_web::web::Bytes;
 use dashmap::DashMap;
 
 pub trait Storage<T: Clone>: Default + Debug {
-    fn store(&self, bytes: Bytes) -> T;
+    fn store(&self, bytes: Bytes, thumbnail_bytes: Bytes) -> T;
 
     fn retrieve(&self, object_id: &T) -> Option<Bytes>;
+
+    fn retrieve_thumbnail(&self, object_id: &T) -> Option<Bytes>;
 
     fn contains(&self, object_id: &T) -> bool;
 
@@ -18,18 +20,22 @@ pub trait Storage<T: Clone>: Default + Debug {
 }
 
 #[derive(Debug, Default)]
-pub struct Memory(DashMap<u64, Bytes>);
+pub struct Memory(DashMap<u64, (Bytes, Bytes)>);
 
 impl Storage<u64> for Memory {
     fn retrieve(&self, object_id: &u64) -> Option<Bytes> {
-        self.0.get(object_id).map(|x| x.clone())
+        self.0.get(object_id).map(|x| x.clone().0)
     }
 
-    fn store(&self, bytes: Bytes) -> u64 {
+    fn retrieve_thumbnail(&self, object_id: &u64) -> Option<Bytes> {
+        self.0.get(object_id).map(|x| x.clone().1)
+    }
+
+    fn store(&self, bytes: Bytes, thumbnail_bytes: Bytes) -> u64 {
         let mut hasher = DefaultHasher::new();
         bytes.hash(&mut hasher);
         let hash = hasher.finish();
-        self.0.insert(hash, bytes);
+        self.0.insert(hash, (bytes, thumbnail_bytes));
         hash
     }
 

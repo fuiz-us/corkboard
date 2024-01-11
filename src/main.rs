@@ -17,8 +17,18 @@ struct AppState {
 }
 
 #[get("/get/{media_id}")]
-async fn get(data: web::Data<AppState>, path: web::Path<MediaId>) -> impl Responder {
-    match data.media_manager.retrieve(&path) {
+async fn get_full(data: web::Data<AppState>, path: web::Path<MediaId>) -> impl Responder {
+    match data.media_manager.retrieve(path.into_inner()) {
+        Some(b) => Ok(HttpResponse::build(StatusCode::OK)
+            .content_type("image/png")
+            .body(b)),
+        None => Err(ErrorNotFound("This file was not found")),
+    }
+}
+
+#[get("/thumbnail/{media_id}")]
+async fn get_thumbnail(data: web::Data<AppState>, path: web::Path<MediaId>) -> impl Responder {
+    match data.media_manager.retrieve_thumbnail(path.into_inner()) {
         Some(b) => Ok(HttpResponse::build(StatusCode::OK)
             .content_type("image/png")
             .body(b)),
@@ -28,7 +38,7 @@ async fn get(data: web::Data<AppState>, path: web::Path<MediaId>) -> impl Respon
 
 #[get("/exists/{media_id}")]
 async fn exists(data: web::Data<AppState>, path: web::Path<MediaId>) -> impl Responder {
-    web::Json(data.media_manager.contains(&path))
+    web::Json(data.media_manager.contains(path.into_inner()))
 }
 
 #[derive(MultipartForm)]
@@ -58,17 +68,28 @@ async fn upload(
         .with_guessed_format()?
         .decode()?;
 
+    let thumbnail = decoded_image.resize(200, 200, image::imageops::FilterType::Nearest);
+
     let mut bytes: Vec<u8> = Vec::new();
     decoded_image.write_to(
         &mut std::io::Cursor::new(&mut bytes),
         image::ImageOutputFormat::Png,
     )?;
 
-    let media_id = data.media_manager.store(actix_web::web::Bytes::from(bytes));
+    let mut thumbnail_bytes: Vec<u8> = Vec::new();
+    thumbnail.write_to(
+        &mut std::io::Cursor::new(&mut thumbnail_bytes),
+        image::ImageOutputFormat::Png,
+    )?;
+
+    let media_id = data.media_manager.store(
+        actix_web::web::Bytes::from(bytes),
+        actix_web::web::Bytes::from(thumbnail_bytes),
+    );
 
     actix_web::rt::spawn(async move {
         actix_web::rt::time::sleep(std::time::Duration::from_secs(60 * 60)).await;
-        data.media_manager.delete(&media_id);
+        data.media_manager.delete(media_id);
     });
 
     Ok::<actix_web::web::Json<MediaId>, ImageDecodingError>(web::Json(media_id))
@@ -86,7 +107,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(MultipartFormConfig::default().memory_limit(16_000_000))
             .app_data(app_data.clone())
             .route("/hello", web::get().to(|| async { "Hello World!" }))
-            .service(get)
+            .service(get_full)
+            .service(get_thumbnail)
             .service(exists)
             .service(upload);
 
