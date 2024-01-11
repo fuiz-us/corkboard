@@ -115,6 +115,7 @@ async fn main() -> std::io::Result<()> {
         #[cfg(feature = "https")]
         {
             let cors = actix_cors::Cors::default()
+                .allowed_origin_fn(|origin, _| origin.as_bytes().ends_with(b".fuiz.pages.dev"))
                 .allowed_origin("https://fuiz.us")
                 .allowed_methods(vec!["GET", "POST"])
                 .allowed_headers(vec![
