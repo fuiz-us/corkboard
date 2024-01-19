@@ -68,7 +68,7 @@ async fn upload(
         .with_guessed_format()?
         .decode()?;
 
-    let thumbnail = decoded_image.resize(200, 200, image::imageops::FilterType::Nearest);
+    let thumbnail = decoded_image.resize(400, 400, image::imageops::FilterType::Nearest);
 
     let mut bytes: Vec<u8> = Vec::new();
     decoded_image.write_to(
