@@ -21,8 +21,8 @@ pub struct MediaManager<U: Clone, T: Storage<U>> {
 }
 
 impl<U: Clone, T: Storage<U>> MediaManager<U, T> {
-    pub fn store(&self, bytes: Bytes, thumbnail_bytes: Bytes) -> MediaId {
-        let object_id = self.storage.store(bytes, thumbnail_bytes);
+    pub fn store(&self, bytes: Bytes) -> MediaId {
+        let object_id = self.storage.store(bytes);
         loop {
             let media_id = MediaId::new();
             match self.mapping.entry(media_id) {
@@ -40,13 +40,6 @@ impl<U: Clone, T: Storage<U>> MediaManager<U, T> {
             .get(&media_id)
             .map(|x| x.to_owned())
             .and_then(|x| self.storage.retrieve(&x))
-    }
-
-    pub fn retrieve_thumbnail(&self, media_id: MediaId) -> Option<Bytes> {
-        self.mapping
-            .get(&media_id)
-            .map(|x| x.to_owned())
-            .and_then(|x| self.storage.retrieve_thumbnail(&x))
     }
 
     pub fn contains(&self, media_id: MediaId) -> bool {
