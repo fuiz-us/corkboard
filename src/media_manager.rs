@@ -1,12 +1,13 @@
 use actix_web::web::Bytes;
 use dashmap::{mapref::entry::Entry, DashMap};
+use mime::Mime;
 use serde::{Deserialize, Serialize};
-use serde_hex::{Compact, SerHex};
+use serde_hex::{SerHex, Strict};
 
 use crate::storage::Storage;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct MediaId(#[serde(with = "SerHex::<Compact>")] u64);
+pub struct MediaId(#[serde(with = "SerHex::<Strict>")] u64);
 
 impl MediaId {
     fn new() -> Self {
@@ -21,8 +22,8 @@ pub struct MediaManager<U: Clone, T: Storage<U>> {
 }
 
 impl<U: Clone, T: Storage<U>> MediaManager<U, T> {
-    pub fn store(&self, bytes: Bytes) -> MediaId {
-        let object_id = self.storage.store(bytes);
+    pub fn store(&self, bytes: Bytes, content_type: Mime) -> MediaId {
+        let object_id = self.storage.store(bytes, content_type);
         loop {
             let media_id = MediaId::new();
             match self.mapping.entry(media_id) {
@@ -35,7 +36,7 @@ impl<U: Clone, T: Storage<U>> MediaManager<U, T> {
         }
     }
 
-    pub fn retrieve(&self, media_id: MediaId) -> Option<Bytes> {
+    pub fn retrieve(&self, media_id: MediaId) -> Option<(Bytes, Mime)> {
         self.mapping
             .get(&media_id)
             .map(|x| x.to_owned())
